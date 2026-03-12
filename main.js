@@ -73,7 +73,27 @@ function getShiftDuration(startTime, endTime) {
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getIdleTime(startTime, endTime) {
-    // TODO: Implement this function
+
+  const startSec = timeToSeconds(startTime);
+  const endSec = timeToSeconds(endTime);
+ 
+  // delivery window in sec
+  const deliveryStart = 8 * 3600;  //  h x sec/hours
+  const deliveryEnd = 22 * 3600; 
+ 
+  let idleSec = 0;
+ 
+  // math min end sec cuz edges case what if someone STARTS and ENDS even b4 8am 
+  if (startSec < deliveryStart) {
+    idleSec += Math.min(endSec, deliveryStart) - startSec;
+  }
+ 
+  // math max same but AFTER deliv satrt
+  if (endSec > deliveryEnd) {
+    idleSec += endSec - Math.max(startSec, deliveryEnd);
+  }
+ 
+  return secondsToDuration(idleSec);
 }
 
 // ============================================================
@@ -83,7 +103,10 @@ function getIdleTime(startTime, endTime) {
 // Returns: string formatted as h:mm:ss
 // ============================================================
 function getActiveTime(shiftDuration, idleTime) {
-    // TODO: Implement this function
+  const shiftSec = durationToSeconds(shiftDuration);
+  const idleSec = durationToSeconds(idleTime);
+  const activeSec = shiftSec - idleSec;
+  return secondsToDuration(activeSec);
 }
 
 // ============================================================
@@ -93,7 +116,24 @@ function getActiveTime(shiftDuration, idleTime) {
 // Returns: boolean
 // ============================================================
 function metQuota(date, activeTime) {
-    // TODO: Implement this function
+
+  const dateParts = date.split("-");
+
+  const year = parseInt(dateParts[0]);
+  const month = parseInt(dateParts[1]);
+  const day = parseInt(dateParts[2]);
+ 
+ let quotaSec;
+
+if (year === 2025 && month === 4 && day >= 10 && day <= 30) {
+  quotaSec = 6 * 3600; 
+} else {
+  quotaSec = (8 * 3600) + (24 * 60);
+}
+ 
+  const activeSec = durationToSeconds(activeTime);
+ 
+  return activeSec >= quotaSec;
 }
 
 // ============================================================
@@ -115,7 +155,21 @@ function addShiftRecord(textFile, shiftObj) {
 // Returns: nothing (void)
 // ============================================================
 function setBonus(textFile, driverID, date, newValue) {
-    // TODO: Implement this function
+  const content = fs.readFileSync(textFile, "utf8");
+  let lines = content.split("\n").filter(Boolean);
+ 
+  for (let i = 0; i < lines.length; i++) {
+    //cols is an array , kol comma fel txt file bet separate el elements 
+    const cols = lines[i].split(",");
+    // cols[0]=driverID, cols[2]=date, cols[9]=hasBonus
+    if (cols[0].trim() === driverID.trim() && cols[2].trim() === date.trim()) {
+      cols[9] = String(newValue); // update hasBonus column (index 9)
+      lines[i] = cols.join(",");  // rebuild the line
+      break; // stop after first match 
+    }
+  }
+ 
+  fs.writeFileSync(textFile, lines.join("\n") + "\n", "utf8");
 }
 
 // ============================================================
@@ -126,7 +180,36 @@ function setBonus(textFile, driverID, date, newValue) {
 // Returns: number (-1 if driverID not found)
 // ============================================================
 function countBonusPerMonth(textFile, driverID, month) {
-    // TODO: Implement this function
+
+  const content = fs.readFileSync(textFile, "utf8");
+  const lines = content.split("\n").filter(Boolean);
+ 
+  //  "4" / "04" --> 4
+  const targetMonth = parseInt(month);
+ 
+  let driverExists = false;
+  let bonusCount = 0;
+ 
+  for (let i = 0; i < lines.length; i++) {
+    const cols = lines[i].split(",");
+    
+    if (cols[0].trim() === driverID.trim()) {
+      driverExists = true;
+ 
+      // get month from date string "yyyy-mm-dd"
+      const recordMonth = parseInt(cols[2].trim().split("-")[1]);
+ 
+      if (recordMonth === targetMonth) {
+        if (cols[9].trim() === "true") {
+          bonusCount++;
+        }
+      }
+    }
+  }
+ 
+  if (!driverExists) return -1;
+ 
+  return bonusCount;
 }
 
 // ============================================================
