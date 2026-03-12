@@ -143,7 +143,78 @@ if (year === 2025 && month === 4 && day >= 10 && day <= 30) {
 // Returns: object with 10 properties or empty object {}
 // ============================================================
 function addShiftRecord(textFile, shiftObj) {
-    // TODO: Implement this function
+
+    const driverID = shiftObj.driverID;
+  const driverName = shiftObj.driverName;
+  const date = shiftObj.date;
+  const startTime = shiftObj.startTime;
+  const endTime = shiftObj.endTime;
+
+  let content = "";
+  try {
+    content = fs.readFileSync(textFile, "utf8");
+  } catch (e) {
+    content = ""; 
+  }
+
+  let rawLines = content.split("\n");
+  let lines = [];
+  for (let i = 0; i < rawLines.length; i++) {
+    if (rawLines[i].trim() !== "") {
+      lines.push(rawLines[i]);
+    }
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const columns = lines[i].split(","); 
+    const existingID = columns[0].trim();
+    const existingDate = columns[2].trim();
+
+    if (existingID === driverID.trim() && existingDate === date.trim()) {
+      return {}; // stop here if duplicate found
+    }
+  }
+
+  const shiftDuration = getShiftDuration(startTime, endTime);
+  const idleTime = getIdleTime(startTime, endTime);
+  const activeTime = getActiveTime(shiftDuration, idleTime);
+  const quota = metQuota(date, activeTime);
+  const hasBonus = false;
+
+const newLine = driverID + "," + driverName + "," +  date + "," + startTime.trim() + "," + 
+                endTime.trim() + "," + shiftDuration + "," + idleTime + "," + activeTime + "," + quota + "," + 
+                 hasBonus;
+
+  let lastIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const columns = lines[i].split(",");
+    if (columns[0].trim() === driverID.trim()) {
+      lastIndex = i; 
+     }
+  }
+
+  if (lastIndex === -1) {    lines.push(newLine);
+  } else {
+    lines.splice(lastIndex + 1, 0, newLine);
+  }
+
+  const finalFileContent = lines.join("\n") + "\n";
+  fs.writeFileSync(textFile, finalFileContent, "utf8");
+
+  const newRecord = {
+    driverID: driverID,
+    driverName: driverName,
+    date: date,
+    startTime: startTime,
+    endTime: endTime,
+    shiftDuration: shiftDuration,
+    idleTime: idleTime,
+    activeTime: activeTime,
+    metQuota: quota,
+    hasBonus: hasBonus,
+  };
+
+  return newRecord;
 }
 
 // ============================================================
