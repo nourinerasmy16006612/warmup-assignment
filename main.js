@@ -6,9 +6,65 @@ const fs = require("fs");
 // endTime: (typeof string) formatted as hh:mm:ss am or hh:mm:ss pm
 // Returns: string formatted as h:mm:ss
 // ============================================================
-function getShiftDuration(startTime, endTime) {
-    // TODO: Implement this function
+
+// helper1 methdo to convert string form txt file total sec 
+
+function timeToSeconds(timeStr) {
+  // input =10:02:20 am --> array ["10:02:20", "am"]
+  // ^^ splits based on space 
+  timeStr = timeStr.trim(); //remeoves ay extra 
+  const parts = timeStr.split(" ");
+  const period = parts[1].toLowerCase(); // "am" or "pm"
+ 
+  // tplit time part on :  ["10", "02", "20"]
+  const timeParts = parts[0].split(":");
+  let hours = parseInt(timeParts[0]);   // like Integer.parseInt() in java
+  let minutes = parseInt(timeParts[1]);
+  let seconds = parseInt(timeParts[2]);
+ 
+  // covert h to military time
+  if (period === "am" && hours === 12) hours = 0;
+  if (period === "pm" && hours !== 12) hours += 12;
+ 
+  // return total sec
+  return hours * 3600 + minutes * 60 + seconds;
 }
+
+//helper2 same as ^^ cuz shift duration mafihash am / pm
+
+function durationToSeconds(durationStr) {
+  durationStr = durationStr.trim();
+  const parts = durationStr.split(":");
+
+  const hours = parseInt(parts[0]);
+  const minutes = parseInt(parts[1]);
+  const seconds = parseInt(parts[2]);
+
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+//helper3 ha convert sec l duration 
+
+function secondsToDuration(totalSeconds) {
+
+    const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+ 
+  // padStart(2, "0") adds a zero if the num is 1 digit
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+ 
+return hours + ":" + mm + ":" + ss;}
+
+function getShiftDuration(startTime, endTime) {
+  const startSec = timeToSeconds(startTime);
+  const endSec = timeToSeconds(endTime);
+  const diffSec = endSec - startSec; 
+  return secondsToDuration(diffSec);
+}
+
+
 
 // ============================================================
 // Function 2: getIdleTime(startTime, endTime)
