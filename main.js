@@ -326,7 +326,93 @@ return hours + ":" + mm + ":" + ss;
 // Returns: string formatted as hhh:mm:ss
 // ============================================================
 function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, month) {
-    // TODO: Implement this function
+
+    const rateContent = fs.readFileSync(rateFile, "utf8");
+  const rawRateLines = rateContent.split("\n");
+  let dayOff = null;
+
+  for (let i = 0; i < rawRateLines.length; i++) {
+    const line = rawRateLines[i].trim();
+    if (line !== "") { //check for empty lines
+      const cols = line.split(",");
+      if (cols[0].trim() === driverID.trim()) {
+        dayOff = cols[1].trim(); 
+        break; 
+      }
+    }
+  }
+
+  let dayOffIndex = -1;
+  if (dayOff !== null) {
+    switch (dayOff.toLowerCase()) {
+      case "sunday":    dayOffIndex = 0; break;
+      case "monday":    dayOffIndex = 1; break;
+      case "tuesday":   dayOffIndex = 2; break;
+      case "wednesday": dayOffIndex = 3; break;
+      case "thursday":  dayOffIndex = 4; break;
+      case "friday":    dayOffIndex = 5; break;
+      case "saturday":  dayOffIndex = 6; break;
+    }
+  }
+
+  const content = fs.readFileSync(textFile, "utf8");
+  const rawLines = content.split("\n");
+  let totalRequiredSec = 0;
+
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i].trim();
+    
+    if (line !== "") {
+      const cols = line.split(",");
+      
+      if (cols[0].trim() === driverID.trim()) {
+        const dateStr = cols[2].trim(); 
+        const dateParts = dateStr.split("-");
+        const year = parseInt(dateParts[0]);
+        const month_rec = parseInt(dateParts[1]);
+        const day = parseInt(dateParts[2]);
+
+        //  process only  if it's the correct month
+        if (month_rec === month) {
+          const dateObj = new Date(year, month_rec - 1, day);
+          const dayOfWeek = dateObj.getDay();
+
+          // if it's NOT their day off, add to the required time
+          if (dayOfWeek !== dayOffIndex) {
+            
+            let dailyQuotaSec;
+            // check for Eid Period (Apr 10-30, 2025)
+            if (year === 2025 && month_rec === 4 && day >= 10 && day <= 30) {
+              dailyQuotaSec = 6 * 3600; // 6 hours
+            } else {
+              dailyQuotaSec = (8 * 3600) + (24 * 60); // 8h 24m
+            }
+            
+            totalRequiredSec = totalRequiredSec + dailyQuotaSec;
+          }
+        }
+      }
+    }
+  }
+
+  const bonusReduction = bonusCount * 2 * 3600;
+  totalRequiredSec = totalRequiredSec - bonusReduction;
+
+  if (totalRequiredSec < 0) {
+    totalRequiredSec = 0;
+  }
+
+  const hours = Math.floor(totalRequiredSec / 3600);
+  const minutes = Math.floor((totalRequiredSec % 3600) / 60);
+  const seconds = totalRequiredSec % 60;
+
+  let mm = String(minutes);
+  if (mm.length < 2) { mm = "0" + mm; }
+  
+  let ss = String(seconds);
+  if (ss.length < 2) { ss = "0" + ss; }
+
+  return hours + ":" + mm + ":" + ss;
 }
 
 // ============================================================
