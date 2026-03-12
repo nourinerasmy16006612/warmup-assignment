@@ -220,7 +220,29 @@ function countBonusPerMonth(textFile, driverID, month) {
 // Returns: string formatted as hhh:mm:ss
 // ============================================================
 function getTotalActiveHoursPerMonth(textFile, driverID, month) {
-    // TODO: Implement this function
+  const content = fs.readFileSync(textFile, "utf8");
+  const lines = content.split("\n").filter(Boolean);
+ 
+  let totalSeconds = 0;
+ 
+  for (let i = 0; i < lines.length; i++) {
+    const cols = lines[i].split(",");
+    if (cols[0].trim() === driverID.trim()) {
+      const recordMonth = parseInt(cols[2].trim().split("-")[1]);
+      if (recordMonth === month) {
+        totalSeconds += durationToSeconds(cols[7].trim());
+      }
+    }
+  }
+ 
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+ 
+  const mm = String(minutes).padStart(2, "0");
+  const ss = String(seconds).padStart(2, "0");
+ 
+return hours + ":" + mm + ":" + ss;
 }
 
 // ============================================================
@@ -245,7 +267,62 @@ function getRequiredHoursPerMonth(textFile, rateFile, bonusCount, driverID, mont
 // Returns: integer (net pay)
 // ============================================================
 function getNetPay(driverID, actualHours, requiredHours, rateFile) {
-    // TODO: Implement this function
+  // like i java sw2itch table bass bel ?:
+  const tierAllowance = {
+    1: 50, // Senior
+    2: 20, // Regular
+    3: 10, // Junior
+    4: 3,  // Trainee
+  };
+ 
+  //  read basePay and tier from rateFile 
+  const rateContent = fs.readFileSync(rateFile, "utf8");
+  const rateLines = rateContent.split("\n").filter(Boolean);
+ 
+  let basePay = 0;
+  let tier = 0;
+ 
+  for (let i = 0; i < rateLines.length; i++) {
+    const cols = rateLines[i].split(",");
+    // rateFile format: driverID, dayOff, basePay, tier
+    if (cols[0].trim() === driverID.trim()) {
+      basePay = parseInt(cols[2].trim());
+      tier = parseInt(cols[3].trim());
+      break;
+    }
+  }
+ 
+  const actualSec = durationToSeconds(actualHours);
+  const requiredSec = durationToSeconds(requiredHours);
+ 
+  // if driver worked enough -> no deduction
+  if (actualSec >= requiredSec) return basePay;
+ 
+  // calc missing time in sec
+  const missingTotalSec = requiredSec - actualSec;
+ 
+
+  //convert to h
+  const missingTotalHours = missingTotalSec / 3600;
+ 
+  // if tier null aw undefined all = 0
+  const allowance = tierAllowance[tier] || 0;
+  const missingAfterAllowance = missingTotalHours - allowance;
+ 
+  // If missing is within allowance → no deduction
+  if (missingAfterAllowance <= 0) return basePay;
+ 
+  // Only FULL hours count → floor (e.g., 1.67 → 1)
+  const billableMissingHours = Math.floor(missingAfterAllowance);
+ 
+  // calc deduction
+  const deductionRatePerHour = Math.floor(basePay / 185);
+  const salaryDeduction = billableMissingHours * deductionRatePerHour;
+ 
+  const netPay = basePay - salaryDeduction;
+ 
+  // can't go below 0
+  return Math.max(0, netPay);
 }
 
 module.exports = {
